@@ -11,10 +11,10 @@ class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key, required this.name});
 
   @override
-  _AdminPageState createState() => _AdminPageState();
+  _AdminHomePageState createState() => _AdminHomePageState();
 }
 
-class _AdminPageState extends State<AdminHomePage> {
+class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
   List<Map<String, dynamic>> _newsList = [];
   late List<Widget> _pages;
@@ -43,7 +43,7 @@ class _AdminPageState extends State<AdminHomePage> {
       setState(() {
         _newsList = []; // Menampilkan loading indicator
       });
-      final news = await ApiService.fetchNews(); // Panggil fetchNews dari ApiService
+      final news = await ApiService.fetchNews(role: ''); // Panggil fetchNews dari ApiService
       setState(() {
         _newsList = news; // Memperbarui daftar berita
       });
@@ -251,6 +251,7 @@ class _AdminPageState extends State<AdminHomePage> {
   void _addNews(BuildContext context) {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
+    final contentController = TextEditingController();
     final imageUrlController = TextEditingController();
 
     showDialog(
@@ -262,6 +263,7 @@ class _AdminPageState extends State<AdminHomePage> {
           children: [
             _buildTextField(controller: titleController, labelText: 'Judul Berita'),
             _buildTextField(controller: descriptionController, labelText: 'Deskripsi'),
+            _buildTextField(controller: contentController, labelText: 'Konten Berita'), // Input untuk konten
             _buildTextField(controller: imageUrlController, labelText: 'URL Gambar'),
           ],
         ),
@@ -271,6 +273,7 @@ class _AdminPageState extends State<AdminHomePage> {
             final success = await ApiService.addNews(
               titleController.text,
               descriptionController.text,
+              contentController.text,
               imageUrlController.text,
             );
             if (success) {
@@ -344,5 +347,3 @@ class _AdminPageState extends State<AdminHomePage> {
     );
   }
 }
-
-

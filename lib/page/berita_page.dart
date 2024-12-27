@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart'; // Pastikan file ini sudah ada
+import 'api_service.dart';
+import 'news_detail_page.dart'; // Pastikan ini di-import
 
 class BeritaPage extends StatefulWidget {
   final List<Map<String, dynamic>> newsList;
@@ -22,7 +23,7 @@ class _BeritaPageState extends State<BeritaPage> {
 
   Future<void> _fetchNews() async {
     try {
-      final news = await ApiService.fetchNews();
+      final news = await ApiService.fetchNews(role: ''); // Anda bisa menambahkan role jika diperlukan
       setState(() {
         _newsList = news; // Update daftar berita
         _isLoading = false; // Selesai memuat
@@ -47,24 +48,32 @@ class _BeritaPageState extends State<BeritaPage> {
       return const Center(child: Text('Tidak ada berita tersedia.'));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: _newsList.length,
-      itemBuilder: (context, index) {
-        final news = _newsList[index];
-        return Column(
-          children: [
-            _buildNewsCard(
-              context,
-              imageUrl: news['image_url'] ?? '', 
-              title: news['title'] ?? 'Judul Tidak Tersedia',
-              description: news['description'] ?? 'Deskripsi Tidak Tersedia',
-              newsId: news['id'],  // Kirim ID berita
-            ),
-            const SizedBox(height: 10),
-          ],
-        );
-      },
+    return Scaffold(
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: _newsList.length,
+        itemBuilder: (context, index) {
+          final news = _newsList[index];
+          return Column(
+            children: [
+              _buildNewsCard(
+                context,
+                imageUrl: news['image_url'] ?? '',
+                title: news['title'] ?? 'Judul Tidak Tersedia',
+                description: news['description'] ?? 'Deskripsi Tidak Tersedia',
+                content: news['content'] ?? 'Konten Tidak Tersedia',
+                date: news['date'] ?? 'Tanggal Tidak Tersedia',
+                newsId: news['id'],  // Pass the news ID for CRUD operations
+              ),
+              const SizedBox(height: 10),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addNews(context),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
@@ -73,68 +82,92 @@ class _BeritaPageState extends State<BeritaPage> {
     required String imageUrl,
     required String title,
     required String description,
-    required int newsId,  // Terima ID berita
+    required String content,
+    required String date,
+    required int newsId,  // Add newsId here
   }) {
-    return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              topRight: Radius.circular(15),
+    return GestureDetector(
+      onTap: () {
+        // Navigasi ke halaman NewsDetailPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NewsDetailPage(
+              news: {
+                'title': title,
+                'imageUrl': imageUrl,
+                'description': description,
+                'content': content,
+                'date': date,
+              },
             ),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Image.asset('assets/images/placeholder.jpg', fit: BoxFit.cover),
-                  )
-                : Image.asset('assets/images/placeholder.jpg', fit: BoxFit.cover),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Card(
+        elevation: 5,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                topRight: Radius.circular(15),
+              ),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Image.asset('assets/images/placeholder.jpg', fit: BoxFit.cover),
+                    )
+                  : Image.asset('assets/images/placeholder.jpg', fit: BoxFit.cover),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            // Add edit and delete buttons here
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                IconButton(
+                  onPressed: () => _editNews(
+                    context,
+                    title,
+                    description,
+                    content,
+                    imageUrl,
+                    newsId,
+                  ),
+                  icon: const Icon(Icons.edit),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () {
-                        _editNews(context, title, description, imageUrl, newsId);
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        _deleteNews(context, newsId); // Ubah ke int
-                      },
-                    ),
-                  ],
+                IconButton(
+                  onPressed: () => _deleteNews(context, newsId),
+                  icon: const Icon(Icons.delete),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -144,13 +177,16 @@ class _BeritaPageState extends State<BeritaPage> {
     BuildContext context,
     String currentTitle,
     String currentDescription,
-    String currentImageUrl, 
+    String currentContent,
+    String currentImageUrl,
     int newsId,  // Gunakan int untuk ID berita
   ) {
     final TextEditingController titleController =
         TextEditingController(text: currentTitle);
     final TextEditingController descriptionController =
         TextEditingController(text: currentDescription);
+    final TextEditingController contentController =
+        TextEditingController(text: currentContent);
     final TextEditingController imageUrlController =
         TextEditingController(text: currentImageUrl);
 
@@ -180,6 +216,15 @@ class _BeritaPageState extends State<BeritaPage> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
+                  controller: contentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Konten',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 5,
+                ),
+                const SizedBox(height: 10),
+                TextField(
                   controller: imageUrlController,
                   decoration: const InputDecoration(
                     labelText: 'URL Gambar',
@@ -198,11 +243,12 @@ class _BeritaPageState extends State<BeritaPage> {
             ),
             TextButton(
               onPressed: () async {
-                final success = await ApiService.editNews(
-                  newsId,
-                  titleController.text,
-                  descriptionController.text,
-                  imageUrlController.text,
+                final success = await ApiService.updateNews(
+                  id: newsId,
+                  title: titleController.text,
+                  description: descriptionController.text,
+                  content: contentController.text,
+                  imageUrl: imageUrlController.text,
                 );
                 if (success) {
                   await _fetchNews(); // Refresh daftar berita
@@ -249,6 +295,89 @@ class _BeritaPageState extends State<BeritaPage> {
                 }
               },
               child: const Text("Hapus"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Fungsi untuk menambahkan berita
+  void _addNews(BuildContext context) {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+    final TextEditingController contentController = TextEditingController();
+    final TextEditingController imageUrlController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Tambah Berita"),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Judul Berita',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: contentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Konten',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 5,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: imageUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'URL Gambar',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Batal"),
+            ),
+            TextButton(
+              onPressed: () async {
+                final success = await ApiService.addNews(
+                  titleController.text,
+                  descriptionController.text,
+                  contentController.text,
+                  imageUrlController.text,
+                );
+                if (success) {
+                  await _fetchNews(); // Refresh daftar berita
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal menambahkan berita.')),
+                  );
+                }
+              },
+              child: const Text("Simpan"),
             ),
           ],
         );
